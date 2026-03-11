@@ -20,24 +20,38 @@ import org.apache.http.protocol.HttpContext;
 import net.emiliollbb.downloader.exception.DownloaderException;
 
 public class HttpDownloader {
+	private static final int BUFFER_SIZE=104857600;
 	
 	public void downloadGet(String url, Map<String, String> headers, OutputStream out) throws DownloaderException {
-		byte[] buffer = new byte[10240];
+		byte[] buffer = new byte[BUFFER_SIZE];
 		try (CloseableHttpClient httpClient = HttpClientBuilder.create().setRedirectStrategy(new NoRedirectStrategy()).build()) {
 			HttpGet httpGet = new HttpGet(url);
 			for(Entry<String, String> h : headers.entrySet()) {
 				httpGet.setHeader(h.getKey(), h.getValue());
 			}
+			System.out.println("GET "+url);
 			try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
 				HttpEntity entity = response.getEntity();
 				System.out.println("HTTP Status: "+response.getStatusLine().getStatusCode());
 				if (entity != null) {
 					try (InputStream instream = entity.getContent()) {
+						System.out.print("Downloading");
+						System.out.flush();
 						int bytesRead;
+						int dots=0;
+						long totalBytes=0;
 			            while ((bytesRead = instream.read(buffer)) != -1) {
-			            	System.out.println(""+bytesRead + "Bytes read");
 			                out.write(buffer, 0, bytesRead);
+							totalBytes+=bytesRead;
+							if(dots++%10==0) {
+								System.out.print(".");
+								System.out.flush();
+							}
+							if(dots%1000==0) {
+								System.out.print("\n");
+							}
 			            }
+						System.out.println("\n"+totalBytes+" bytes read");
 					}
 				}
 			}
